@@ -1,7 +1,9 @@
 # Next Session Quick Reference
 
-**Last Session:** 002 - Cross-Platform Build System (2025-11-22)
+**Last Session:** 003 - Rebranding and Priorities (2025-11-22)
 **Next Focus:** Phase 2 - Core Rendering
+
+**See:** [docs/phase2-rendering-guide.md](./phase2-rendering-guide.md) for complete implementation guide
 
 ## 🎯 Gameplay Vision: Zeni Hajiki
 
@@ -35,24 +37,23 @@
 - ⏳ No swap chain yet
 - ⏳ No rendering yet
 
-## ⚠️ IMPORTANT: Library Update Before Phase 2
+## 🎮 Session 003 Key Decisions
 
-**RECOMMENDED:** Switch from ODE to Jolt Physics before writing any physics code.
+### Project Renamed: Bidama Hajiki (ビー玉弾き)
+- "Marbles" now only refers to museum/legacy code
+- Bidama (ビー玉) = glass marble, Hajiki (弾き) = flicking
+- All build outputs renamed to `bidama_hajiki`
 
-**Why:**
-- Jolt is modern (2024), used in Horizon Forbidden West
-- Better performance, multi-core optimized
-- Actively maintained (ODE's last update ~2019)
-- Perfect for marble physics (sphere collisions, rolling)
-- Already in vcpkg: `joltphysics:x64-mingw-dynamic`
+### Gameplay Philosophy: Find the Fun First
+1. **Lighting is essential** - Need spatial clarity to judge angles/power
+2. **Surface physics = skill** - Friction and drag ARE the gameplay
+3. **Controller-first** - PS2 controller as primary input (analog stick for analog power)
+4. **Playable > polished** - Get gameplay working before RTX graphics
 
-**How:**
-1. Update vcpkg: Replace `ode` with `joltphysics`
-2. Update CMakeLists.txt
-3. Rebuild both platforms
-4. ~15 minutes, very low risk
-
-**See:** [docs/LIBRARY_DECISIONS.md](./LIBRARY_DECISIONS.md) for full analysis
+### Library Philosophy
+**"Add libraries only when needed, choose the best at that time"**
+- Removed all ODE references (will evaluate physics options in Phase 4)
+- No premature dependencies
 
 ---
 
@@ -96,10 +97,10 @@ From ROADMAP.md Phase 2:
 ### Running
 ```bash
 # Linux (if Vulkan drivers available in WSL2)
-./build-linux/marbles
+./build-linux/bidama_hajiki
 
 # Windows (copy to Windows side)
-cp build-windows/marbles.exe /mnt/c/Users/YourName/Desktop/
+cp build-windows/bidama_hajiki.exe /mnt/c/Users/YourName/Desktop/
 cp vcpkg/installed/x64-mingw-dynamic/bin/*.dll /mnt/c/Users/YourName/Desktop/
 # Then run on Windows
 ```
@@ -115,7 +116,7 @@ git status --short
 
 ## File Structure
 ```
-Marbles/
+bidama_hajiki/
 ├── src/
 │   └── main.cpp              # Current: minimal Vulkan init
 ├── build-linux/              # Linux build output (gitignored)
@@ -200,27 +201,27 @@ From ROADMAP.md:
 - Focus on getting something rendering (clear screen to color)
 - Don't over-engineer - get it working first
 
-## Session 002 Achievements
+## Session History
 
-**12 granular commits:**
+### Session 003 (2025-11-22): Rebranding and Priorities
+- Renamed project to Bidama Hajiki (ビー玉弾き)
+- Established "find the fun first" philosophy
+- Decided on controller-first input design
+- Clarified lighting and physics as essential, not polish
+- Cleaned legacy ODE references
+- Created comprehensive Phase 2 implementation guide
 
-Session 002 commits:
-1. `52193fc` - build: update .gitignore for cross-platform builds
-2. `2fb9389` - build: add cross-platform CMake configuration
-3. `a8b2bbb` - build: add platform-specific build scripts
-4. `7d72683` - build: add MinGW-w64 CMake toolchain file
-5. `cba6dcc` - docs: add Session 002 documentation
+### Session 002 (2025-11-22): Cross-Platform Build System
+- Set up Windows cross-compilation (MinGW-w64)
+- Configured vcpkg for Windows dependencies
+- Created platform-specific build scripts
+- Established LSP integration with compile_commands.json
 
-Session 001 commits:
-6. `6b3c9ea` - chore: archive legacy codebase to museum/
-7. `057ea25` - chore: remove legacy files from root directory
-8. `e82b970` - feat: add minimal Vulkan initialization
-9. `11cba7a` - fix: allow root Makefile in git while ignoring generated ones
-10. `a38fa3d` - build: add simple Makefile for direct compilation
-11. `88e0abd` - docs: add README and ROADMAP
-12. `e818bae` - docs: add Session 001 documentation
-
-**Both sessions fully documented and committed!**
+### Session 001 (2025-11-22): Resurrection and Foundation
+- Archived legacy "Marbles" codebase to museum/
+- Started fresh with minimal Vulkan initialization
+- Established C-style programming approach
+- Created project structure and build system
 
 ## Optional: Cleanup Unused vcpkg Packages
 

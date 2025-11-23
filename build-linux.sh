@@ -6,7 +6,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Building Marbles for Linux..."
+echo "Building Bidama Hajiki for Linux..."
 
 # Create build directory
 mkdir -p "$SCRIPT_DIR/build-linux"
@@ -20,5 +20,5 @@ cmake --build . --config Release
 
 echo ""
 echo "Linux build complete!"
-echo "Executable: build-linux/marbles"
-echo "Run with: ./build-linux/marbles"
+echo "Executable: build-linux/bidama_hajiki"
+echo "Run with: ./build-linux/bidama_hajiki"

@@ -35,7 +35,7 @@ Zeni Hajiki is a traditional Japanese coin-flicking gambling game featured in Gh
 Instead of flat coins on a table, we use **beautiful glass marbles** with:
 - RTX ray-traced glass refraction
 - Physically-based rendering (PBR)
-- Realistic marble-to-marble collisions (ODE physics)
+- Realistic marble-to-marble collisions with proper friction and rolling physics
 - Different marble types (cat's eye, swirls, galaxies, clearies)
 
 ### Gameplay Translation

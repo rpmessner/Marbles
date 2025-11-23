@@ -1,4 +1,4 @@
-# Simple Makefile for Marbles
+# Simple Makefile for Bidama Hajiki
 # No build system complexity - just compile and link
 
 CC = gcc
@@ -14,7 +14,7 @@ SRCS = src/main.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Output
-TARGET = marbles
+TARGET = bidama_hajiki
 
 # Build
 all: $(TARGET)

@@ -6,7 +6,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Building Marbles for Windows (x64)..."
+echo "Building Bidama Hajiki for Windows (x64)..."
 
 # Create build directory
 mkdir -p "$SCRIPT_DIR/build-windows"
@@ -26,8 +26,8 @@ cmake --build . --config Release
 
 echo ""
 echo "Windows build complete!"
-echo "Executable: build-windows/marbles.exe"
+echo "Executable: build-windows/bidama_hajiki.exe"
 echo ""
-echo "To run on Windows, copy marbles.exe and required DLLs:"
-echo "  cp build-windows/marbles.exe /mnt/c/your/path/"
+echo "To run on Windows, copy bidama_hajiki.exe and required DLLs:"
+echo "  cp build-windows/bidama_hajiki.exe /mnt/c/your/path/"
 echo "  cp ../vcpkg/installed/x64-mingw-dynamic/bin/*.dll /mnt/c/your/path/"

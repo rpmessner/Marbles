@@ -1,7 +1,7 @@
 #!/bin/bash
-# Setup script for Marbles development environment
+# Setup script for Bidama Hajiki development environment
 
-echo "Installing dependencies for Marbles..."
+echo "Installing dependencies for Bidama Hajiki..."
 
 if command -v apt-get &> /dev/null; then
     echo "Detected apt (Debian/Ubuntu)"
@@ -40,6 +40,6 @@ elif command -v brew &> /dev/null; then
 
 else
     echo "Unsupported package manager"
-    echo "Please manually install: cmake, glfw3, ode"
+    echo "Please manually install: cmake, glfw3, vulkan"
     exit 1
 fi

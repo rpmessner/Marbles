@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Marbles VERSION 1.0 LANGUAGES C CXX)
+project(BidamaHajiki VERSION 1.0 LANGUAGES C CXX)
 
 # Use C++17 but write C-style code
 set(CMAKE_CXX_STANDARD 17)
@@ -25,17 +25,17 @@ set(SOURCES
 )
 
 # Create executable
-add_executable(marbles ${SOURCES})
+add_executable(bidama_hajiki ${SOURCES})
 
 # Link libraries
-target_link_libraries(marbles
+target_link_libraries(bidama_hajiki
     Vulkan::Vulkan
     glfw
 )
 
 # Compiler warnings (catch issues early)
 if(MSVC)
-    target_compile_options(marbles PRIVATE /W4)
+    target_compile_options(bidama_hajiki PRIVATE /W4)
 else()
-    target_compile_options(marbles PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(bidama_hajiki PRIVATE -Wall -Wextra -Wpedantic)
 endif()

@@ -1,6 +1,6 @@
-# Marbles
+# Bidama Hajiki (ビー玉弾き)
 
-A 3D marble physics simulation written in C-style C++.
+A physics-based marble flicking game inspired by the zeni hajiki minigame from Ghost of Yotei. Written in C-style C++ with Vulkan and RTX ray tracing.
 
 ## Philosophy
 
@@ -72,12 +72,13 @@ make
 
 ## Goals
 
-This isn't just a physics sim - it's **the most beautiful marble simulation ever made**:
+A beautiful, skill-based marble flicking game with:
+- **Zeni hajiki-inspired gameplay** - aim, charge power, flick marbles
 - **RTX-powered ray tracing** for realistic glass refraction and caustics
 - **Physically-based rendering** - marbles that look like real glass
 - **Different marble types**: cat's eye, swirls, clearies, galaxies
 - **Modern shader programming** - write GLSL from scratch, understand every line
-- **Real-time physics** with ODE for accurate marble collisions
+- **Real-time physics** with Jolt Physics for accurate marble collisions
 
 ## Architecture
 
@@ -97,6 +98,6 @@ See [ROADMAP.md](./ROADMAP.md) for the full development plan.
 
 ## Museum
 
-The original college project code is preserved in the `museum/` folder.
+The original "Marbles" college project (2004) is preserved in the `museum/` folder.
 It's a textbook example of over-engineered OOP with Singletons, Factories,
-and deep inheritance hierarchies. We learned from its mistakes.
+and deep inheritance hierarchies. We learned from its mistakes and started fresh.

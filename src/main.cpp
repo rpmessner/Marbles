@@ -1,4 +1,5 @@
-// Marbles - A 3D marble physics simulation
+// Bidama Hajiki (ビー玉弾き) - A marble flicking game
+// Inspired by the zeni hajiki minigame from Ghost of Yotei
 // Following Jonathan Blow's C-style philosophy:
 // - Simple, direct code that you can understand
 // - Data-oriented thinking
@@ -14,7 +15,7 @@
 // --- Configuration ---
 const int WINDOW_WIDTH = 1024;
 const int WINDOW_HEIGHT = 768;
-const char* WINDOW_TITLE = "Marbles";
+const char* WINDOW_TITLE = "Bidama Hajiki";
 const bool ENABLE_VALIDATION = true; // Vulkan validation layers for debugging
 
 // --- Vulkan State ---
@@ -52,7 +53,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 static bool create_vulkan_instance(VulkanState* vk) {
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName = "Marbles";
+    app_info.pApplicationName = "Bidama Hajiki";
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "No Engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
