@@ -35,6 +35,27 @@
 - ⏳ No swap chain yet
 - ⏳ No rendering yet
 
+## ⚠️ IMPORTANT: Library Update Before Phase 2
+
+**RECOMMENDED:** Switch from ODE to Jolt Physics before writing any physics code.
+
+**Why:**
+- Jolt is modern (2024), used in Horizon Forbidden West
+- Better performance, multi-core optimized
+- Actively maintained (ODE's last update ~2019)
+- Perfect for marble physics (sphere collisions, rolling)
+- Already in vcpkg: `joltphysics:x64-mingw-dynamic`
+
+**How:**
+1. Update vcpkg: Replace `ode` with `joltphysics`
+2. Update CMakeLists.txt
+3. Rebuild both platforms
+4. ~15 minutes, very low risk
+
+**See:** [docs/LIBRARY_DECISIONS.md](./LIBRARY_DECISIONS.md) for full analysis
+
+---
+
 ## Next Steps (Phase 2: Core Rendering)
 
 From ROADMAP.md Phase 2:
