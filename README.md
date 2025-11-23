@@ -25,8 +25,10 @@ This project follows **Jonathan Blow's programming philosophy**:
 ```bash
 sudo apt-get install cmake build-essential \
     libglfw3-dev libvulkan-dev vulkan-tools \
-    vulkan-validationlayers-dev libode-dev
+    vulkan-validationlayers-dev
 ```
+
+Physics library will be added in Phase 4 (when needed).
 
 You'll also need GPU drivers with Vulkan support:
 - NVIDIA: `sudo apt-get install nvidia-driver-xxx`
@@ -35,17 +37,21 @@ You'll also need GPU drivers with Vulkan support:
 
 #### macOS
 ```bash
-brew install cmake glfw vulkan-headers vulkan-loader ode
+brew install cmake glfw vulkan-headers vulkan-loader
 ```
 
 Download the Vulkan SDK from [LunarG](https://vulkan.lunarg.com/)
+
+Physics library will be added in Phase 4 (when needed).
 
 #### Windows
 - Install the Vulkan SDK from [LunarG](https://vulkan.lunarg.com/)
 - Install vcpkg and use it to install dependencies:
   ```bash
-  vcpkg install glfw3 ode
+  vcpkg install glfw3
   ```
+
+Physics library will be added in Phase 4 (when needed).
 
 ## Building
 

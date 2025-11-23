@@ -6,8 +6,8 @@ CXX = g++
 CFLAGS = -std=c11 -Wall -Wextra -O2
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 
-# Libraries
-LIBS = -lglfw -lvulkan -lode -lm -ldl -lpthread
+# Libraries (physics will be added in Phase 4)
+LIBS = -lglfw -lvulkan -lm -ldl -lpthread
 
 # Source files
 SRCS = src/main.cpp

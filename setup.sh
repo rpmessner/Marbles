@@ -13,8 +13,9 @@ if command -v apt-get &> /dev/null; then
         libvulkan-dev \
         vulkan-tools \
         vulkan-validationlayers-dev \
-        libode-dev \
         pkg-config
+
+    # Physics library will be added when needed (Phase 4)
 
     echo ""
     echo "Dependencies installed successfully!"
@@ -28,7 +29,9 @@ if command -v apt-get &> /dev/null; then
 
 elif command -v brew &> /dev/null; then
     echo "Detected Homebrew (macOS)"
-    brew install cmake glfw vulkan-headers vulkan-loader ode
+    brew install cmake glfw vulkan-headers vulkan-loader
+
+    # Physics library will be added when needed (Phase 4)
 
     echo ""
     echo "Dependencies installed successfully!"
