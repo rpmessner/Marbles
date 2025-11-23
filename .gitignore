@@ -21,11 +21,11 @@ vcpkg/
 *.dylib
 *.exe
 
-# CMake
+# CMake generated files (not our source Makefile in root)
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
-Makefile
+build*/Makefile
 compile_commands.json
 
 # OS files
