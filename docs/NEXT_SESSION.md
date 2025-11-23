@@ -3,6 +3,20 @@
 **Last Session:** 002 - Cross-Platform Build System (2025-11-22)
 **Next Focus:** Phase 2 - Core Rendering
 
+## 🎯 Gameplay Vision: Zeni Hajiki
+
+**Target:** Clone of the zeni hajiki minigame from Ghost of Yotei
+
+**Core Mechanic:**
+- Aim your marble at targets
+- Charge power, release to shoot
+- Score by hitting exactly ONE target marble
+- First to 6 points wins
+
+**See:** [docs/GAMEPLAY_VISION.md](./GAMEPLAY_VISION.md) for full design
+
+---
+
 ## Current Status ✅
 
 ### Build System
