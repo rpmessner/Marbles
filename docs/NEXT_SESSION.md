@@ -222,6 +222,20 @@ Session 001 commits:
 
 **Both sessions fully documented and committed!**
 
+## Optional: Cleanup Unused vcpkg Packages
+
+vcpkg currently has ODE installed from Session 002, but we removed it from the build.
+
+**To clean up (optional):**
+```bash
+cd vcpkg
+./vcpkg remove ode:x64-mingw-dynamic
+```
+
+This saves ~20MB but isn't critical. Your builds work fine as-is.
+
+---
+
 ## Quick Health Check Before Starting
 
 Run these to verify everything is ready:
