@@ -1,5 +1,26 @@
 # Marbles Development Roadmap
 
+## Gameplay Inspiration
+
+**Target Mechanic:** Zeni Hajiki (coin-flicking game from Ghost of Yotei)
+
+See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay design.
+
+**Core Loop:**
+- Aim your marble at targets
+- Charge power and release to shoot
+- Score by hitting exactly ONE target marble
+- First to 6 points wins
+- Pure physics-based skill gameplay
+
+**Why it's perfect:**
+- Simple rules, emergent complexity through physics
+- Skill-based, not RNG
+- Quick, tense matches
+- Beautiful glass marbles as the centerpiece
+
+---
+
 ## Phase 1: Foundation ✅ (Current)
 - [x] Archive old over-engineered codebase
 - [x] Set up modern build system (CMake + Makefile)
@@ -28,11 +49,18 @@
 - [ ] Sphere-plane collision (floor)
 - [ ] Update rendering from physics simulation
 
-## Phase 5: Basic Gameplay
-- [ ] Spawn multiple marbles
-- [ ] Player-controlled "shooter" marble
-- [ ] Apply forces (shooting mechanics)
-- [ ] Simple game rules (knock marbles out of ring)
+## Phase 5: Zeni Hajiki Gameplay
+- [ ] Circular arena with boundaries
+- [ ] Place target marbles (initial setup)
+- [ ] Player shooting mechanics (aim, charge power, release)
+- [ ] Collision detection and scoring
+  - Hit exactly 1 marble → Player scores
+  - Hit 0 or 2+ marbles → Turn ends
+  - Knock marble off arena → Opponent scores
+- [ ] Simple AI opponent (random aim with slight targeting)
+- [ ] Turn-based game loop
+- [ ] Win condition (first to 6 points)
+- [ ] Victory/defeat screens
 
 ## Phase 6: Advanced Graphics (The Fun Part!)
 - [ ] Implement PBR (Physically-Based Rendering)
