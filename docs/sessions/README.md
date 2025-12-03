@@ -4,6 +4,22 @@ This folder contains detailed documentation of each development session for Bida
 
 ## Session Index
 
+### [Session 004: Migration to Zig](./004-zig-migration.md)
+**Date:** 2025-12-03 | **Status:** ✅ Complete
+
+Major architectural pivot - switched from C++ to Zig. The project philosophy ("simple, direct code") aligned perfectly with Zig's design goals.
+
+**Key Accomplishments:**
+- ✅ Migrated from C++ to Zig 0.13.0
+- ✅ Replaced CMake/vcpkg/Makefiles with Zig build system (30 lines)
+- ✅ Ported main.cpp to main.zig (~180 lines)
+- ✅ Removed 500MB+ of build dependencies
+- ✅ Updated all documentation for Zig
+
+**Next Up:** Phase 2 - Core Rendering (clear screen to color)
+
+---
+
 ### [Session 003: Rebranding and Priorities](./003-rebranding-and-priorities.md)
 **Date:** 2025-11-22 | **Status:** ✅ Complete
 
@@ -16,12 +32,12 @@ Renamed project to Bidama Hajiki (ビー玉弾き), established "find the fun fi
 - ✅ Cleaned legacy ODE references
 - ✅ Created detailed Phase 2 rendering guide
 
-**Next Up:** Phase 2 - Core Rendering (clear screen to color)
+**Next Up:** Language migration (Session 004)
 
 ---
 
 ### [Session 002: Cross-Platform Build System](./002-cross-platform-build-system.md)
-**Date:** 2025-11-22 | **Status:** ✅ Complete
+**Date:** 2025-11-22 | **Status:** ✅ Complete (Superseded by Zig)
 
 Established cross-platform build system with Windows cross-compilation from WSL2.
 
@@ -31,7 +47,7 @@ Established cross-platform build system with Windows cross-compilation from WSL2
 - ✅ Platform-specific build scripts
 - ✅ LSP integration with compile_commands.json
 
-**Next Up:** Rebranding and priorities
+**Note:** This session's build system was replaced by Zig in Session 004.
 
 ---
 
@@ -97,8 +113,8 @@ Links, documentation, resources used
 
 ## Statistics
 
-- **Total Sessions:** 3
-- **Project Age:** Day 1 (all sessions on same day!)
-- **Lines of Code:** ~250 (foundation laid, rendering next)
-- **Lines of Documentation:** ~800+ (comprehensive guides)
-- **Coffee Consumed:** ☕ Countless
+- **Total Sessions:** 4
+- **Project Age:** 12 days
+- **Language:** Zig 0.13.0 (migrated from C++ in Session 004)
+- **Lines of Code:** ~180 (foundation laid, rendering next)
+- **Lines of Documentation:** ~1500+ (comprehensive guides)

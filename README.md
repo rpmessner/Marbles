@@ -1,6 +1,6 @@
 # Bidama Hajiki (ビー玉弾き)
 
-A physics-based marble flicking game inspired by the zeni hajiki minigame from Ghost of Yotei. Written in C-style C++ with Vulkan and RTX ray tracing.
+A physics-based marble flicking game inspired by the zeni hajiki minigame from Ghost of Yotei. Written in Zig with Vulkan and RTX ray tracing.
 
 ## Philosophy
 
@@ -9,65 +9,54 @@ This project follows **Jonathan Blow's programming philosophy**:
 - Data-oriented design - think about actual data layout
 - Minimal abstraction - only abstract when truly necessary
 - No design patterns for the sake of patterns
-- C-style code in C++ (structs + functions, not heavy OOP)
+- Structs + functions, not heavy OOP
 - Solve today's problems today, not hypothetical future ones
+
+## Why Zig?
+
+We switched from C++ to Zig because:
+- **Philosophy alignment** - Zig is designed for the same "simple, direct" style we were forcing C++ into
+- **Excellent C interop** - Vulkan and GLFW work seamlessly via `@cImport`
+- **Built-in build system** - Replaces CMake + vcpkg + Makefiles
+- **Cross-compilation** - Windows builds are trivial: `zig build -Dtarget=x86_64-windows`
+- **No hidden control flow** - No exceptions, no hidden allocations, no surprises
 
 ## Build Requirements
 
-### Quick Setup
+### Quick Start
+
 ```bash
-./setup.sh
+# Install Zig (0.13.0+)
+# See https://ziglang.org/download/
+
+# Build
+zig build
+
+# Run
+zig build run
 ```
 
-### Manual Installation
+### Dependencies
 
-#### Linux (Ubuntu/Debian)
+**Linux:**
 ```bash
-sudo apt-get install cmake build-essential \
-    libglfw3-dev libvulkan-dev vulkan-tools \
-    vulkan-validationlayers-dev
+sudo apt-get install libglfw3-dev libvulkan-dev vulkan-tools vulkan-validationlayers-dev
 ```
 
-Physics library will be added in Phase 4 (when needed).
-
-You'll also need GPU drivers with Vulkan support:
-- NVIDIA: `sudo apt-get install nvidia-driver-xxx`
-- AMD: `sudo apt-get install mesa-vulkan-drivers`
-- Intel: `sudo apt-get install mesa-vulkan-drivers`
-
-#### macOS
+**macOS:**
 ```bash
-brew install cmake glfw vulkan-headers vulkan-loader
+brew install glfw vulkan-headers vulkan-loader
+# Also install Vulkan SDK from https://vulkan.lunarg.com/
 ```
 
-Download the Vulkan SDK from [LunarG](https://vulkan.lunarg.com/)
-
-Physics library will be added in Phase 4 (when needed).
-
-#### Windows
+**Windows:**
 - Install the Vulkan SDK from [LunarG](https://vulkan.lunarg.com/)
-- Install vcpkg and use it to install dependencies:
-  ```bash
-  vcpkg install glfw3
-  ```
+- GLFW headers/libs (or cross-compile from Linux)
 
-Physics library will be added in Phase 4 (when needed).
+### Cross-Compilation (Windows from Linux)
 
-## Building
-
-### Option 1: Direct Makefile (simpler)
 ```bash
-make
-./marbles
-```
-
-### Option 2: CMake (if you prefer)
-```bash
-mkdir build
-cd build
-cmake ..
-make
-./marbles
+zig build -Dtarget=x86_64-windows
 ```
 
 ## Goals
@@ -78,7 +67,6 @@ A beautiful, skill-based marble flicking game with:
 - **Physically-based rendering** - marbles that look like real glass
 - **Different marble types**: cat's eye, swirls, clearies, galaxies
 - **Modern shader programming** - write GLSL from scratch, understand every line
-- **Real-time physics** with Jolt Physics for accurate marble collisions
 
 ## Architecture
 

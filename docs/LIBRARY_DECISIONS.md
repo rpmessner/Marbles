@@ -1,204 +1,115 @@
 # Library Decisions & Modern Alternatives
 
-**Last Updated:** 2025-11-22 (Session 002)
-**Status:** Under Review - Considering Modern Alternatives
+**Last Updated:** 2025-12-03 (Session 004 - Zig Migration)
+**Status:** Active - Switched from C++ to Zig
+
+## Major Decision: Language Switch to Zig
+
+### Why Zig?
+
+**The C++ paradox:** We were writing "C-style code in C++" - avoiding classes, RAII, exceptions, templates. We were fighting the language to stay simple.
+
+**Zig solves this:**
+- ✅ **Philosophy match** - Built for simple, direct, explicit code
+- ✅ **C interop** - `@cImport` works seamlessly with Vulkan/GLFW
+- ✅ **Build system included** - Replaces CMake + vcpkg + Makefiles
+- ✅ **Cross-compilation** - `zig build -Dtarget=x86_64-windows` just works
+- ✅ **No hidden control flow** - No exceptions, no hidden allocations
+- ✅ **Comptime** - Compile-time evaluation instead of templates/macros
+
+**Decision:** Switch to Zig ✅ (Session 004)
+
+---
 
 ## Critical Decision: Physics Engine
 
-### Current Choice: ODE (Open Dynamics Engine)
-**Version:** 0.16.x
-**Last major update:** ~2019
-**License:** BSD/LGPL
+### Current Choice: TBD (Phase 4)
 
-**Why we initially chose it:**
-- Used in original 2004 project
-- Available via vcpkg
-- Works
+With the Zig switch, our physics options change:
 
-**Problems:**
-- ❌ **OLD** - Last major development ~2019
-- ❌ Limited multi-core support
-- ❌ Dated API design
-- ❌ Smaller community
-- ❌ Not used in modern AAA games
+**Option 1: Jolt Physics via C API**
+- Jolt has a C API wrapper: [JoltC](https://github.com/jrouwe/JoltPhysics/tree/master/Jolt/C)
+- Would work via `@cImport`
+- Still AAA-proven, modern, fast
 
-### ⭐ RECOMMENDED: Jolt Physics
+**Option 2: Zig-native physics**
+- [zphysics](https://github.com/zig-gamedev/zphysics) - Zig bindings for Jolt
+- Part of zig-gamedev ecosystem
+- More idiomatic Zig integration
 
-**Why Jolt is Better:**
-- ✅ **Modern** - Actively developed (2024 updates)
-- ✅ **AAA Proven** - Used in Horizon Forbidden West
-- ✅ **Multi-core optimized** - Scales with CPU cores
-- ✅ **MIT License** - Very permissive
-- ✅ **C++17** - Matches our codebase
-- ✅ **Excellent documentation** - Worth reading just to learn
-- ✅ **vcpkg support** - `vcpkg install joltphysics`
-- ✅ **Active development** - v5.2.0 released Nov 2024
-- ✅ **Fast** - Outperforms ODE and Bullet in benchmarks
-- ✅ **Perfect for marbles** - Excellent sphere collision and rolling physics
+**Option 3: Hand-roll simple physics**
+- Marbles are spheres - collision detection is straightforward
+- Could implement basic physics ourselves (educational value)
+- Only need: sphere-sphere, sphere-plane collision
 
-**vcpkg Installation:**
-```bash
-vcpkg install joltphysics:x64-mingw-dynamic  # Windows
-vcpkg install joltphysics                     # Linux/macOS
-```
-
-**Features available:**
-- `[core]` - Base physics engine
-- `[debugrenderer]` - Debug visualization
-- `[profiler]` - Performance profiling
-
-**Latest versions (2024):**
-- v5.2.0 (Nov 27, 2024)
-- v5.1.0 (Aug 19, 2024)
-- v5.0.0 (Apr 5, 2024)
-
-**Key advantages for our project:**
-- Better sphere-sphere collision handling
-- More accurate friction models (critical for marble rolling)
-- Better performance (though not critical for our scale)
-- Modern C++ API (easier to work with)
-- Actively maintained (won't be abandoned)
-
-### Alternative: Bullet Physics
-
-**Pros:**
-- Mature and battle-tested
-- Used in many games (Godot 3, etc.)
-- Good documentation
-- Available in vcpkg
-
-**Cons:**
-- C++ 2003 API (dated)
-- Not as fast as Jolt
-- Less active development than Jolt
-
-### Alternative: PhysX (NVIDIA)
-
-**Pros:**
-- Industry standard (Unreal, Unity)
-- Best angular stability
-- Now open source (v4, v5)
-- Available in vcpkg
-
-**Cons:**
-- NVIDIA-centric (though works everywhere)
-- More complex than needed for marbles
-- Heavier weight
-
-### **DECISION:** Switch to Jolt Physics ✅
-
-**When:** Before Phase 4 (Physics Integration)
-**Why:** Modern, fast, actively developed, perfect for our use case
-**Risk:** Low - better in every way than ODE
+**Decision:** Defer until Phase 4. Evaluate zphysics vs hand-rolled.
 
 ---
 
 ## Graphics & Windowing Libraries
 
 ### Vulkan ✅ CONFIRMED
-**Current:** Vulkan 1.3
-**Status:** ✅ Correct choice
+
+**Current:** Vulkan 1.3 via `@cImport`
+**Status:** ✅ Works perfectly with Zig
 
 **Why it's right:**
 - Modern, explicit API
 - RTX ray tracing support (critical for glass marbles)
 - Cross-platform
-- Industry standard for modern games
-- Excellent documentation
-
-**Alternatives considered:**
-- OpenGL - ❌ Too old, no RTX
-- DirectX 12 - ❌ Windows-only
-- Metal - ❌ macOS-only
+- C API works directly in Zig
 
 **Decision:** Keep Vulkan ✅
 
 ### GLFW ✅ CONFIRMED
-**Current:** GLFW 3.4
-**Status:** ✅ Correct choice
+
+**Current:** GLFW 3.x via `@cImport`
+**Status:** ✅ Works perfectly with Zig
 
 **Why it's right:**
-- Simple, clean API
-- Cross-platform (Windows, Linux, macOS)
+- Simple, clean C API
+- Cross-platform
 - Vulkan support
-- Actively maintained
-- Widely used
-
-**Alternatives:**
-- SDL2 - More features, but heavier
-- Custom platform layer - Unnecessary complexity
+- `@cImport` integration is seamless
 
 **Decision:** Keep GLFW ✅
 
 ---
 
-## Build System & Package Management
+## Build System
 
-### vcpkg ✅ CONFIRMED (for Windows)
-**Status:** ✅ Correct choice for cross-compilation
+### Zig Build System ✅ NEW
 
-**Why it's right:**
-- Official Microsoft package manager
-- Excellent CMake integration
-- Cross-compilation support (MinGW)
-- Well-maintained
-- Growing package ecosystem
+**Replaced:** CMake + Makefile + vcpkg
 
-**For our setup:**
-- Windows deps: vcpkg
-- Linux deps: System package manager (apt)
-- macOS deps: Homebrew
+**Why it's better:**
+- Single `build.zig` file
+- Cross-compilation is trivial
+- No external dependencies (vcpkg)
+- Declarative and readable
 
-**Decision:** Keep vcpkg for Windows ✅
+**Build commands:**
+```bash
+zig build          # Build
+zig build run      # Build and run
+zig build -Dtarget=x86_64-windows  # Cross-compile
+```
 
-### CMake ✅ CONFIRMED
-**Current:** CMake 3.20+
-**Status:** ✅ Correct choice
-
-**Why it's right:**
-- Industry standard
-- Cross-platform
-- Excellent vcpkg integration
-- Generates compile_commands.json (LSP support)
-
-**We also have:** Simple Makefile (alternative)
-
-**Decision:** Keep both CMake + Makefile ✅
-
----
-
-## Compiler & Toolchain
-
-### Current Setup ✅ CONFIRMED
-- **Linux:** GCC 13.3 / Clang
-- **Windows:** MinGW-w64 (x86_64-w64-mingw32-g++ 13.0)
-- **C++ Standard:** C++17
-
-**Status:** ✅ Good choices
-
-**Considerations:**
-- C++20? - Not needed yet, C++17 is fine
-- Clang everywhere? - GCC is working fine
-- MSVC for Windows? - MinGW cross-compilation is cleaner
-
-**Decision:** Keep current setup ✅
+**Decision:** Use Zig build system exclusively ✅
 
 ---
 
 ## Shader Language
 
 ### GLSL ✅ CONFIRMED
+
 **Status:** ✅ Correct choice
 
 **Why it's right:**
 - Native to Vulkan (compiles to SPIR-V)
 - Cross-platform
 - Simple toolchain (glslc)
-- Matches project philosophy (simple, direct)
-
-**Alternatives:**
-- HLSL - More tooling, but unnecessary
-- Slang - Overkill for this project
+- No Zig equivalent needed - shaders are GPU code
 
 **Decision:** Keep GLSL ✅
 
@@ -206,108 +117,52 @@ vcpkg install joltphysics                     # Linux/macOS
 
 ## Future Libraries to Consider
 
-### Asset Loading (When Needed)
-
-**For 3D models (if we need complex marble designs):**
-- **Assimp** - Full-featured, might be overkill
-- **tinyobjloader** - Lightweight OBJ loader
-- **cgltf** - glTF 2.0 loader (modern format)
-
-**Decision:** Defer until Phase 8 (Marble Artistry)
-
-### Image Loading (For Textures)
-
-**Options:**
-- **stb_image.h** - Single-header, simple ✅ Recommended
-- **SOIL2** - More features
-- **DevIL** - Kitchen sink
-
-**Decision:** Use stb_image when needed (Phase 6+)
-
-### Audio (Phase 9: Polish)
-
-**For marble collision sounds:**
-- **miniaudio** - Single-header, cross-platform ✅ Recommended
-- **OpenAL** - More complex, full 3D audio
-- **FMOD** - Commercial option (was in old codebase)
-
-**Decision:** Use miniaudio when we get to Phase 9
-
 ### Math Library
 
-**Current:** Using Vulkan's math for now
+**Options:**
+- **zalgebra** - Zig-native math library (vectors, matrices)
+- **zmath** - Part of zig-gamedev, SIMD-optimized
+- **Hand-roll** - Simple vec3/mat4 for learning
+
+**Decision:** Start with hand-rolled basics, add zmath if needed
+
+### Image Loading
 
 **Options:**
-- **GLM** - Popular, header-only, GLSL-like ✅ Recommended
-- **Eigen** - More complex, overkill
-- **DirectXMath** - Windows-focused
+- **stb_image via @cImport** - Single header, works in Zig
+- **zigimg** - Zig-native image loading
 
-**Decision:** Add GLM when we need more math (Phase 2-3)
+**Decision:** Use stb_image via @cImport (simple, proven)
 
-### UI (Far Future)
+### Audio (Phase 9)
 
-**For menus, HUDs:**
-- **Dear ImGui** - Immediate mode, perfect for debug UI ✅ Recommended
-- **Nuklear** - Single-header alternative
-- **Custom** - For final game UI
+**Options:**
+- **miniaudio via @cImport** - Single header, works in Zig
+- **zaudio** - Zig-native audio (part of zig-gamedev)
 
-**Decision:** ImGui for debug, defer final UI decisions
+**Decision:** Use miniaudio via @cImport when needed
 
----
+### UI (Debug)
 
-## Summary of Changes Needed
+**Options:**
+- **Dear ImGui via cimgui** - C bindings work with @cImport
+- **zimgui** - Zig bindings for ImGui
 
-### High Priority (Before Phase 4)
-1. ✅ **Switch ODE → Jolt Physics**
-   - Better performance
-   - Modern API
-   - Active development
-   - Perfect for marbles
-
-### Medium Priority (Phase 2-3)
-2. **Add GLM** for math utilities
-   - Header-only
-   - Easy integration
-   - GLSL-like syntax
-
-### Low Priority (Phase 6+)
-3. **Add stb_image.h** for texture loading
-4. **Add Dear ImGui** for debug UI
-
-### Future (Phase 9+)
-5. **Add miniaudio** for sound effects
+**Decision:** Defer until needed
 
 ---
 
-## Installation Commands
+## Zig-Gamedev Ecosystem
 
-### Updated Dependencies
+Worth watching: [github.com/zig-gamedev](https://github.com/zig-gamedev)
 
-**Linux (native build):**
-```bash
-sudo apt-get install -y \
-    cmake build-essential pkg-config \
-    libglfw3-dev libvulkan-dev \
-    # Remove: libode-dev
-    # Jolt will be built from source or vcpkg
-```
+Relevant packages:
+- **zphysics** - Jolt Physics bindings
+- **zmath** - SIMD math library
+- **zvulkan** - Vulkan bindings (we use @cImport instead)
+- **zglfw** - GLFW bindings (we use @cImport instead)
 
-**Windows (via vcpkg):**
-```bash
-./vcpkg/vcpkg install \
-    glfw3:x64-mingw-dynamic \
-    vulkan:x64-mingw-dynamic \
-    joltphysics:x64-mingw-dynamic
-    # Removed: ode:x64-mingw-dynamic
-```
-
-**Optional additions:**
-```bash
-# For development
-./vcpkg/vcpkg install \
-    joltphysics[debugrenderer,profiler]:x64-mingw-dynamic \
-    glm:x64-mingw-dynamic
-```
+We're using `@cImport` directly for now (simpler), but these are available if we need more idiomatic Zig wrappers.
 
 ---
 
@@ -320,67 +175,69 @@ sudo apt-get install -y \
 - ✅ Avoid **over-engineered** solutions
 - ✅ Choose tools that **just work**
 
-**Changes align with philosophy:**
-- Jolt: Modern, well-documented, just works ✅
-- Removing dependencies we don't need yet ✅
-- Keeping build system simple ✅
-
----
-
-## Migration Plan: ODE → Jolt
-
-**When to do it:** During Session 003 or before starting Phase 4
-
-**Steps:**
-1. Update vcpkg dependencies
-2. Update CMakeLists.txt to find Jolt instead of ODE
-3. Remove ODE initialization code from main.cpp
-4. Add Jolt initialization (when we get to Phase 4)
-5. Test builds on both platforms
-
-**Estimated time:** 15-30 minutes
-**Risk:** Very low (haven't written ODE code yet)
-
-**Advantage:** Do it NOW before we write physics code
-
----
-
-## References
-
-### Jolt Physics
-- [Jolt Physics GitHub](https://github.com/jrouwe/JoltPhysics)
-- [Jolt vcpkg Package](https://vcpkg.io/en/package/joltphysics)
-- [Jolt Documentation](https://jrouwe.github.io/JoltPhysics/)
-- [Building and Using Jolt](https://jrouwe.github.io/JoltPhysics/md__build_2_r_e_a_d_m_e.html)
-
-### Physics Engine Comparisons
-- [Open Source Physics Engines List](https://www.tapiorgames.com/blog/open-source-physics-engines)
-- [Best 3D Physics Engines 2025](https://www.slant.co/topics/6628/~3d-physics-engines)
-- [Physics Engine Performance Comparison](https://www.researchgate.net/figure/Performance-comparison-of-three-popular-physics-engines-PhysX-Bullet-and-ODE-performed_fig2_258226292)
-- [Jolt Physics Raylib Tutorial](https://rodneylab.com/jolt-physics-raylib/)
-
-### vcpkg Resources
-- [joltphysics vcpkg Versions](https://vcpkg.link/ports/joltphysics/versions)
-- [Jolt vcpkg Port Info](https://vcpkg.roundtrip.dev/ports/joltphysics)
+**Zig aligns perfectly:**
+- No hidden allocations
+- Explicit error handling
+- No inheritance hierarchies to fight
+- Build system that doesn't require a PhD
 
 ---
 
 ## Decision Log
 
-| Library | Old Choice | New Choice | Reason | When |
-|---------|-----------|------------|--------|------|
-| Physics | ODE 0.16 | Jolt 5.2+ | Modern, faster, AAA-proven | Session 002 |
-| Graphics | Vulkan 1.3 | Vulkan 1.3 | ✅ Keep | Session 001 |
-| Windowing | GLFW 3.4 | GLFW 3.4 | ✅ Keep | Session 001 |
-| Shaders | GLSL | GLSL | ✅ Keep | Session 002 |
-| Build | CMake+Make | CMake+Make | ✅ Keep | Session 001 |
-| Packages | vcpkg | vcpkg | ✅ Keep | Session 002 |
-| Math | (none) | GLM (future) | When needed | TBD |
-| Images | (none) | stb_image (future) | When needed | TBD |
-| Audio | (none) | miniaudio (future) | When needed | TBD |
-| UI | (none) | ImGui (future) | When needed | TBD |
+| Category  | Old Choice     | New Choice        | Reason                  | When        |
+| --------- | -------------- | ----------------- | ----------------------- | ----------- |
+| Language  | C++17          | Zig 0.13          | Philosophy alignment    | Session 004 |
+| Build     | CMake+vcpkg    | Zig build system  | Simpler, cross-compile  | Session 004 |
+| Graphics  | Vulkan 1.3     | Vulkan 1.3        | ✅ Keep                 | Session 001 |
+| Windowing | GLFW 3.4       | GLFW 3.4          | ✅ Keep                 | Session 001 |
+| Shaders   | GLSL           | GLSL              | ✅ Keep                 | Session 002 |
+| Physics   | Jolt (planned) | TBD               | Re-evaluate for Zig     | Phase 4     |
+| Math      | GLM (planned)  | zmath/hand-roll   | Re-evaluate for Zig     | TBD         |
 
 ---
 
-**Status:** Ready to migrate ODE → Jolt Physics
-**Next Action:** Update dependencies and CMakeLists.txt in Session 003
+## Installation Commands
+
+### Dependencies
+
+**Linux:**
+```bash
+# System libraries (same as before)
+sudo apt-get install -y \
+    libglfw3-dev libvulkan-dev \
+    vulkan-tools vulkan-validationlayers-dev
+
+# Install Zig
+# Download from https://ziglang.org/download/
+# Or use a version manager like zigup
+```
+
+**macOS:**
+```bash
+brew install glfw vulkan-headers vulkan-loader
+# Install Zig: brew install zig
+# Also install Vulkan SDK from https://vulkan.lunarg.com/
+```
+
+**Windows:**
+- Install Vulkan SDK from [LunarG](https://vulkan.lunarg.com/)
+- Install Zig from [ziglang.org](https://ziglang.org/download/)
+- Or cross-compile from Linux: `zig build -Dtarget=x86_64-windows`
+
+---
+
+## References
+
+### Zig Resources
+- [Zig Language Reference](https://ziglang.org/documentation/master/)
+- [Zig-Gamedev](https://github.com/zig-gamedev) - Game development ecosystem
+- [Zig Vulkan Examples](https://github.com/Snektron/vulkan-zig)
+
+### Physics Options
+- [zphysics](https://github.com/zig-gamedev/zphysics) - Jolt bindings for Zig
+- [JoltC](https://github.com/jrouwe/JoltPhysics/tree/master/Jolt/C) - C API for Jolt
+
+---
+
+**Status:** Zig migration complete. Ready for Phase 2 development.

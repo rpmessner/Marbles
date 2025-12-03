@@ -21,14 +21,17 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 
 ---
 
-## Phase 1: Foundation ✅ (Current)
+## Phase 1: Foundation ✅ Complete
+
 - [x] Archive old over-engineered codebase
-- [x] Set up modern build system (CMake + Makefile)
-- [x] Create C-style C++ project structure
+- [x] Set up build system (CMake + Makefile) → **Replaced with Zig**
+- [x] Create C-style project structure → **Now Zig**
 - [x] Initialize Vulkan with GLFW
 - [x] Basic window and GPU selection
+- [x] **Session 004: Migrate from C++ to Zig**
 
 ## Phase 2: Core Rendering (Next Up)
+
 - [ ] Create logical device and queues
 - [ ] Set up swap chain
 - [ ] Implement command buffers and render loop
@@ -36,6 +39,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Basic camera system (position, view matrix)
 
 ## Phase 3: Simple Graphics
+
 - [ ] Write first vertex shader (GLSL)
 - [ ] Write first fragment shader (GLSL)
 - [ ] Draw a single sphere (the first marble!)
@@ -43,13 +47,15 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Draw a ground plane
 
 ## Phase 4: Physics Integration
-- [ ] Integrate ODE physics engine
+
+- [ ] Evaluate physics options (zphysics, hand-rolled, JoltC)
 - [ ] Create physics world and bodies
 - [ ] Sphere-sphere collision detection
 - [ ] Sphere-plane collision (floor)
 - [ ] Update rendering from physics simulation
 
 ## Phase 5: Zeni Hajiki Gameplay
+
 - [ ] Circular arena with boundaries
 - [ ] Place target marbles (initial setup)
 - [ ] Player shooting mechanics (aim, charge power, release)
@@ -63,6 +69,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Victory/defeat screens
 
 ## Phase 6: Advanced Graphics (The Fun Part!)
+
 - [ ] Implement PBR (Physically-Based Rendering)
 - [ ] Create glass material shader
 - [ ] Add environment mapping (reflections)
@@ -71,6 +78,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] HDR rendering pipeline
 
 ## Phase 7: Ray Tracing (RTX Magic)
+
 - [ ] Enable Vulkan ray tracing extensions
 - [ ] Create acceleration structures
 - [ ] Implement ray traced reflections
@@ -79,6 +87,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Path tracing for global illumination
 
 ## Phase 8: Marble Artistry
+
 - [ ] Implement procedural marble patterns
 - [ ] Cat's eye marbles
 - [ ] Swirl marbles
@@ -87,6 +96,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Texture-based marble designs
 
 ## Phase 9: Polish & Juice
+
 - [ ] Sound effects (marble collisions)
 - [ ] Camera controls (orbit, zoom)
 - [ ] Particle effects
@@ -95,6 +105,7 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 - [ ] Different play surfaces
 
 ## Future Dreams
+
 - [ ] Multiplayer
 - [ ] VR support
 - [ ] Marble collection/progression
@@ -107,7 +118,8 @@ See [docs/GAMEPLAY_VISION.md](./docs/GAMEPLAY_VISION.md) for complete gameplay d
 ## Philosophy Reminders
 
 As we build this:
-- **No classes unless necessary** - structs and functions first
+- **Zig's philosophy aligns with ours** - simple, explicit, no hidden control flow
+- **Structs and functions** - no class hierarchies
 - **No premature abstraction** - wait until we have 3+ examples
 - **Write shaders from scratch** - understand every line
 - **Simple, direct code** - if it's confusing, simplify it
@@ -117,10 +129,10 @@ As we build this:
 ## Learning Goals
 
 This project is a chance to deeply understand:
+- **Zig programming language** - modern systems programming
 - Modern Vulkan API and graphics pipelines
 - GLSL shader programming
 - Physically-based rendering (PBR)
 - Ray tracing and path tracing
 - Real-time physics simulation
-- C-style programming in modern C++
 - The beauty of simple, direct code
