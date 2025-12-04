@@ -4,6 +4,23 @@ This folder contains detailed documentation of each development session for Bida
 
 ## Session Index
 
+### [Session 005: Core Rendering](./005-core-rendering.md)
+**Date:** 2025-12-04 | **Status:** ✅ Complete
+
+Implemented the complete Vulkan rendering pipeline - from logical device creation to frame presentation. The window now clears to dark blue, proving the entire graphics pipeline works.
+
+**Key Accomplishments:**
+- ✅ Logical device and queue creation
+- ✅ Swap chain with double buffering
+- ✅ Render pass and framebuffers
+- ✅ Command pool, buffers, and sync objects
+- ✅ Working render loop with frame synchronization
+- ✅ Updated build.zig for Zig 0.15.2
+
+**Next Up:** Phase 3 - Triangle Rendering
+
+---
+
 ### [Session 004: Migration to Zig](./004-zig-migration.md)
 **Date:** 2025-12-03 | **Status:** ✅ Complete
 
@@ -113,8 +130,8 @@ Links, documentation, resources used
 
 ## Statistics
 
-- **Total Sessions:** 4
-- **Project Age:** 12 days
-- **Language:** Zig 0.13.0 (migrated from C++ in Session 004)
-- **Lines of Code:** ~180 (foundation laid, rendering next)
-- **Lines of Documentation:** ~1500+ (comprehensive guides)
+- **Total Sessions:** 5
+- **Project Age:** 13 days
+- **Language:** Zig 0.15.2 (updated from 0.13.0 in Session 005)
+- **Lines of Code:** ~800 (rendering pipeline complete)
+- **Lines of Documentation:** ~2000+ (comprehensive guides)
