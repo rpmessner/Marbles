@@ -4,6 +4,22 @@ This folder contains detailed documentation of each development session for Bida
 
 ## Session Index
 
+### [Session 007: Transformations](./007-transformations.md)
+**Date:** 2025-12-05 | **Status:** ✅ Complete
+
+Added MVP (Model-View-Projection) matrix transformations. The triangle now rotates with proper camera and perspective projection.
+
+**Key Accomplishments:**
+- ✅ Vec3 and Mat4 math utilities
+- ✅ Uniform buffer objects for MVP matrices
+- ✅ Descriptor sets and pools
+- ✅ Updated vertex shader with UBO
+- ✅ Time-based rotation animation
+
+**Next Up:** Phase 5 - More Geometry / Game Content
+
+---
+
 ### [Session 006: Triangle Rendering](./006-triangle-rendering.md)
 **Date:** 2025-12-04 | **Status:** ✅ Complete
 
@@ -147,8 +163,8 @@ Links, documentation, resources used
 
 ## Statistics
 
-- **Total Sessions:** 6
-- **Project Age:** 13 days
+- **Total Sessions:** 7
+- **Project Age:** 14 days
 - **Language:** Zig 0.15.2
-- **Lines of Code:** ~1100 (triangle rendering complete)
-- **Lines of Documentation:** ~2500+ (comprehensive guides)
+- **Lines of Code:** ~1450 (transformations complete)
+- **Lines of Documentation:** ~3000+ (comprehensive guides)

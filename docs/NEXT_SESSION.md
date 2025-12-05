@@ -1,7 +1,7 @@
 # Next Session Quick Reference
 
-**Last Session:** 006 - Triangle Rendering (2025-12-04)
-**Next Focus:** Phase 4 - Transformations / Game Content
+**Last Session:** 007 - Transformations (2025-12-05)
+**Next Focus:** Phase 5 - More Geometry / Game Content
 
 ## Gameplay Vision: Zeni Hajiki
 
@@ -24,55 +24,53 @@
 - **Build:** `zig build` / `zig build run`
 - **Cross-compile:** `zig build -Dtarget=x86_64-windows`
 
-### Code Status (After Session 006)
+### Code Status (After Session 007)
 - ✅ Full Vulkan rendering pipeline
 - ✅ GLSL shaders compiled to SPIR-V
 - ✅ Graphics pipeline with dynamic viewport/scissor
 - ✅ Vertex buffer with triangle data
-- ✅ Draw call - triangle renders on screen!
-- ❌ No transformations (everything in NDC)
-- ❌ No uniform buffers
+- ✅ MVP matrix transformations
+- ✅ Uniform buffer objects
+- ✅ Descriptor sets and pools
+- ✅ Time-based rotation animation
 - ❌ No textures
-- ❌ No 3D yet
+- ❌ Only one object (triangle)
+- ❌ No depth buffer (no 3D overlap)
+- ❌ No input handling
 
-## Session 006 Key Changes
+## Session 007 Key Changes
 
-### Added Triangle Rendering
-- Created vertex and fragment shaders in GLSL
-- Compiled to SPIR-V using glslc from Vulkan SDK
-- Embedded shaders at compile time with @embedFile
-- Implemented full graphics pipeline:
-  - Shader stages
-  - Vertex input (position only)
-  - Input assembly (triangle list)
-  - Viewport/scissor (dynamic)
-  - Rasterizer (fill mode)
-  - Color blending (no blend)
-- Created vertex buffer with host-visible memory
-- Updated recordCommandBuffer with draw call
+### Added Transformations
+- Vec3 struct: sub, cross, dot, normalize
+- Mat4 struct: identity, multiply, perspective, lookAt, rotateZ
+- UniformBufferObject struct: model, view, proj matrices
+- Descriptor set layout for UBO binding
+- Uniform buffers (one per frame in flight)
+- Descriptor pool and sets
+- Time-based rotation in render loop
+- Updated vertex shader with MVP transform
 
-**Files added:**
-- src/shaders/triangle.vert
-- src/shaders/triangle.frag
-- src/shaders/triangle.vert.spv
-- src/shaders/triangle.frag.spv
+**Files changed:**
+- src/main.zig (~350 new lines, now 1453 total)
+- src/shaders/triangle.vert (added UBO)
+- src/shaders/triangle.vert.spv (recompiled)
 
 ---
 
-## Next Steps (Phase 4: Transformations)
+## Next Steps (Phase 5)
 
-**Option A: Graphics Fundamentals**
-1. [ ] Add uniform buffer for MVP matrix
-2. [ ] Implement basic camera (view matrix)
-3. [ ] Add projection matrix (perspective or ortho)
-4. [ ] Render multiple objects
-5. [ ] Basic 3D shapes
+**Option A: More Geometry**
+1. [ ] Add depth buffer for proper 3D
+2. [ ] Render multiple triangles/objects
+3. [ ] Push constants for per-object transforms
+4. [ ] Basic 3D shapes (cube, quad)
+5. [ ] Index buffers
 
 **Option B: Game Content**
-1. [ ] Create game table mesh
+1. [ ] Create game table (textured quad)
 2. [ ] Render marbles as circles/spheres
 3. [ ] Implement aiming line
-4. [ ] Basic input handling
+4. [ ] Basic input handling (gamepad/keyboard)
 
 ## Commands Cheat Sheet
 
@@ -105,9 +103,9 @@ glslc src/shaders/triangle.frag -o src/shaders/triangle.frag.spv
 ```
 bidama_hajiki/
 ├── src/
-│   ├── main.zig              # ~1100 lines
+│   ├── main.zig              # ~1450 lines
 │   └── shaders/
-│       ├── triangle.vert     # GLSL vertex shader
+│       ├── triangle.vert     # GLSL vertex shader (with UBO)
 │       ├── triangle.frag     # GLSL fragment shader
 │       ├── triangle.vert.spv # Compiled SPIR-V
 │       └── triangle.frag.spv # Compiled SPIR-V
@@ -118,7 +116,8 @@ bidama_hajiki/
 │   │   ├── 003-rebranding-and-priorities.md
 │   │   ├── 004-zig-migration.md
 │   │   ├── 005-core-rendering.md
-│   │   └── 006-triangle-rendering.md
+│   │   ├── 006-triangle-rendering.md
+│   │   └── 007-transformations.md
 │   ├── NEXT_SESSION.md       # This file
 │   ├── GAMEPLAY_VISION.md
 │   └── LIBRARY_DECISIONS.md
@@ -164,18 +163,48 @@ const VulkanState = struct {
     vertex_buffer: VkBuffer,
     vertex_buffer_memory: VkDeviceMemory,
 
-    // TODO: Add for transformations
-    // uniform_buffers: [*]VkBuffer,
-    // uniform_buffers_memory: [*]VkDeviceMemory,
-    // descriptor_pool: VkDescriptorPool,
-    // descriptor_sets: [*]VkDescriptorSet,
+    // Uniform buffers (per frame)
+    uniform_buffers: [*]VkBuffer,
+    uniform_buffers_memory: [*]VkDeviceMemory,
+    uniform_buffers_mapped: [*]?*anyopaque,
+
+    // Descriptors
+    descriptor_set_layout: VkDescriptorSetLayout,
+    descriptor_pool: VkDescriptorPool,
+    descriptor_sets: [*]VkDescriptorSet,
+};
+```
+
+### Math Types
+```zig
+const Vec3 = struct {
+    x: f32 = 0, y: f32 = 0, z: f32 = 0,
+    fn sub(a: Vec3, b: Vec3) Vec3 { ... }
+    fn cross(a: Vec3, b: Vec3) Vec3 { ... }
+    fn dot(a: Vec3, b: Vec3) f32 { ... }
+    fn normalize(v: Vec3) Vec3 { ... }
+};
+
+const Mat4 = struct {
+    data: [16]f32,
+    fn identity() Mat4 { ... }
+    fn multiply(a: Mat4, b: Mat4) Mat4 { ... }
+    fn perspective(fov, aspect, near, far) Mat4 { ... }
+    fn lookAt(eye, center, up) Mat4 { ... }
+    fn rotateZ(angle) Mat4 { ... }
+};
+
+const UniformBufferObject = struct {
+    model: Mat4,
+    view: Mat4,
+    proj: Mat4,
 };
 ```
 
 ### Vertex Format
 ```zig
 const Vertex = struct {
-    pos: [2]f32,  // 2D position in NDC
+    pos: [2]f32,  // 2D position
     // TODO: Add for next phase
     // color: [3]f32,
     // texCoord: [2]f32,
@@ -191,34 +220,26 @@ From ROADMAP.md:
 - **Write shaders from scratch** - understand every line
 - **Simple, direct code** - if it's confusing, simplify it
 
-## Resources for Next Session
-
-### Vulkan Tutorial Sections
-1. Uniform buffers: https://vulkan-tutorial.com/Uniform_buffers
-2. Descriptor sets: https://vulkan-tutorial.com/Uniform_buffers/Descriptor_layout_and_buffer
-3. 3D rendering: https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Rendering_and_presentation
-
-### Math Resources
-- GLM-style math for Zig: Consider zlm or implement simple mat4/vec3
-- MVP matrix calculation
-- Perspective vs orthographic projection
-
 ## Session History
+
+### Session 007 (2025-12-05): Transformations
+- Added Vec3 and Mat4 math utilities
+- Added uniform buffer objects for MVP matrices
+- Added descriptor sets and pools
+- Updated vertex shader with UBO
+- Triangle now rotates around Z-axis
 
 ### Session 006 (2025-12-04): Triangle Rendering
 - Created GLSL vertex and fragment shaders
 - Compiled shaders to SPIR-V
 - Implemented full graphics pipeline
 - Created vertex buffer with triangle data
-- Updated render loop with draw call
 - Triangle now visible on dark blue background
 
 ### Session 005 (2025-12-04): Core Rendering
 - Implemented complete Vulkan rendering pipeline
 - Added logical device, swap chain, render pass, framebuffers
 - Added command pool/buffers and sync objects
-- Implemented drawFrame() render loop
-- Updated for Zig 0.15.2 compatibility
 - Window now clears to dark blue
 
 ### Session 004 (2025-12-03): Migration to Zig
@@ -247,28 +268,28 @@ timeout 3 ./zig-out/bin/bidama_hajiki; echo "Exit: $?"
 git status --short
 ```
 
-## Session 007 Goals
+## Session 008 Goals
 
-**Primary:** Add transformations OR start game content
+**Primary:** Add more geometry OR start game content
 
-**Option A - Transformations:**
-1. Implement mat4/vec3 math
-2. Add uniform buffer for MVP matrix
-3. Move triangle with model matrix
-4. Add basic camera
+**Option A - More Geometry:**
+1. Add depth buffer
+2. Render multiple objects
+3. Push constants for per-object transforms
+4. Index buffers for efficient rendering
 
 **Option B - Game Content:**
 1. Create table surface
 2. Render marble sprites/circles
 3. Implement aim indicator
-4. Handle controller input
+4. Handle gamepad/keyboard input
 
 **Success criteria:**
 - Multiple objects on screen, OR
-- Game table visible
+- Game table visible with marble(s)
 - No validation errors
 - Code remains simple
 
 ---
 
-**Ready for transformations or game content!**
+**Ready for more geometry or game content!**
