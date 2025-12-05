@@ -53,6 +53,12 @@ const VulkanState = struct {
     image_available_semaphores: ?[*]c.VkSemaphore = null,
     render_finished_semaphores: ?[*]c.VkSemaphore = null,
     in_flight_fences: ?[*]c.VkFence = null,
+    // Graphics pipeline
+    pipeline_layout: c.VkPipelineLayout = null,
+    graphics_pipeline: c.VkPipeline = null,
+    // Vertex buffer
+    vertex_buffer: c.VkBuffer = null,
+    vertex_buffer_memory: c.VkDeviceMemory = null,
 };
 
 // --- Helper Functions ---
@@ -423,6 +429,250 @@ fn createFramebuffers(vk: *VulkanState) bool {
     return true;
 }
 
+// Create shader module from embedded SPIR-V
+fn createShaderModule(device: c.VkDevice, code: []const u8) c.VkShaderModule {
+    var create_info = std.mem.zeroes(c.VkShaderModuleCreateInfo);
+    create_info.sType = c.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = code.len;
+    create_info.pCode = @ptrCast(@alignCast(code.ptr));
+
+    var shader_module: c.VkShaderModule = null;
+    if (c.vkCreateShaderModule(device, &create_info, null, &shader_module) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create shader module\n", .{});
+        return null;
+    }
+    return shader_module;
+}
+
+// Vertex data - simple 2D triangle
+const Vertex = struct {
+    pos: [2]f32,
+};
+
+const vertices = [_]Vertex{
+    .{ .pos = .{ 0.0, -0.5 } }, // top
+    .{ .pos = .{ 0.5, 0.5 } }, // bottom right
+    .{ .pos = .{ -0.5, 0.5 } }, // bottom left
+};
+
+// Create graphics pipeline
+fn createGraphicsPipeline(vk: *VulkanState) bool {
+    // Load shaders (embedded at compile time)
+    const vert_code = @embedFile("shaders/triangle.vert.spv");
+    const frag_code = @embedFile("shaders/triangle.frag.spv");
+
+    const vert_module = createShaderModule(vk.device, vert_code);
+    const frag_module = createShaderModule(vk.device, frag_code);
+    defer c.vkDestroyShaderModule(vk.device, vert_module, null);
+    defer c.vkDestroyShaderModule(vk.device, frag_module, null);
+
+    if (vert_module == null or frag_module == null) {
+        std.debug.print("Failed to create shader modules\n", .{});
+        return false;
+    }
+
+    // Shader stages
+    var vert_stage = std.mem.zeroes(c.VkPipelineShaderStageCreateInfo);
+    vert_stage.sType = c.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vert_stage.stage = c.VK_SHADER_STAGE_VERTEX_BIT;
+    vert_stage.module = vert_module;
+    vert_stage.pName = "main";
+
+    var frag_stage = std.mem.zeroes(c.VkPipelineShaderStageCreateInfo);
+    frag_stage.sType = c.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    frag_stage.stage = c.VK_SHADER_STAGE_FRAGMENT_BIT;
+    frag_stage.module = frag_module;
+    frag_stage.pName = "main";
+
+    const shader_stages = [_]c.VkPipelineShaderStageCreateInfo{ vert_stage, frag_stage };
+
+    // Vertex input - describe our Vertex struct
+    var binding_desc = std.mem.zeroes(c.VkVertexInputBindingDescription);
+    binding_desc.binding = 0;
+    binding_desc.stride = @sizeOf(Vertex);
+    binding_desc.inputRate = c.VK_VERTEX_INPUT_RATE_VERTEX;
+
+    var attr_desc = std.mem.zeroes(c.VkVertexInputAttributeDescription);
+    attr_desc.binding = 0;
+    attr_desc.location = 0;
+    attr_desc.format = c.VK_FORMAT_R32G32_SFLOAT;
+    attr_desc.offset = 0;
+
+    var vertex_input = std.mem.zeroes(c.VkPipelineVertexInputStateCreateInfo);
+    vertex_input.sType = c.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input.vertexBindingDescriptionCount = 1;
+    vertex_input.pVertexBindingDescriptions = &binding_desc;
+    vertex_input.vertexAttributeDescriptionCount = 1;
+    vertex_input.pVertexAttributeDescriptions = &attr_desc;
+
+    // Input assembly
+    var input_assembly = std.mem.zeroes(c.VkPipelineInputAssemblyStateCreateInfo);
+    input_assembly.sType = c.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly.topology = c.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly.primitiveRestartEnable = c.VK_FALSE;
+
+    // Viewport and scissor (dynamic)
+    var viewport = c.VkViewport{
+        .x = 0.0,
+        .y = 0.0,
+        .width = @floatFromInt(vk.swapchain_extent.width),
+        .height = @floatFromInt(vk.swapchain_extent.height),
+        .minDepth = 0.0,
+        .maxDepth = 1.0,
+    };
+
+    var scissor = c.VkRect2D{
+        .offset = .{ .x = 0, .y = 0 },
+        .extent = vk.swapchain_extent,
+    };
+
+    var viewport_state = std.mem.zeroes(c.VkPipelineViewportStateCreateInfo);
+    viewport_state.sType = c.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.viewportCount = 1;
+    viewport_state.pViewports = &viewport;
+    viewport_state.scissorCount = 1;
+    viewport_state.pScissors = &scissor;
+
+    // Dynamic state - viewport and scissor will be set at draw time
+    const dynamic_states = [_]c.VkDynamicState{
+        c.VK_DYNAMIC_STATE_VIEWPORT,
+        c.VK_DYNAMIC_STATE_SCISSOR,
+    };
+    var dynamic_state = std.mem.zeroes(c.VkPipelineDynamicStateCreateInfo);
+    dynamic_state.sType = c.VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state.dynamicStateCount = dynamic_states.len;
+    dynamic_state.pDynamicStates = &dynamic_states;
+
+    // Rasterizer
+    var rasterizer = std.mem.zeroes(c.VkPipelineRasterizationStateCreateInfo);
+    rasterizer.sType = c.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = c.VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = c.VK_FALSE;
+    rasterizer.polygonMode = c.VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0;
+    rasterizer.cullMode = c.VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = c.VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.depthBiasEnable = c.VK_FALSE;
+
+    // Multisampling (disabled)
+    var multisampling = std.mem.zeroes(c.VkPipelineMultisampleStateCreateInfo);
+    multisampling.sType = c.VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = c.VK_FALSE;
+    multisampling.rasterizationSamples = c.VK_SAMPLE_COUNT_1_BIT;
+
+    // Color blending
+    var color_blend_attachment = std.mem.zeroes(c.VkPipelineColorBlendAttachmentState);
+    color_blend_attachment.colorWriteMask = c.VK_COLOR_COMPONENT_R_BIT | c.VK_COLOR_COMPONENT_G_BIT |
+        c.VK_COLOR_COMPONENT_B_BIT | c.VK_COLOR_COMPONENT_A_BIT;
+    color_blend_attachment.blendEnable = c.VK_FALSE;
+
+    var color_blending = std.mem.zeroes(c.VkPipelineColorBlendStateCreateInfo);
+    color_blending.sType = c.VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blending.logicOpEnable = c.VK_FALSE;
+    color_blending.attachmentCount = 1;
+    color_blending.pAttachments = &color_blend_attachment;
+
+    // Pipeline layout (empty for now)
+    var pipeline_layout_info = std.mem.zeroes(c.VkPipelineLayoutCreateInfo);
+    pipeline_layout_info.sType = c.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    if (c.vkCreatePipelineLayout(vk.device, &pipeline_layout_info, null, &vk.pipeline_layout) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create pipeline layout\n", .{});
+        return false;
+    }
+
+    // Create the graphics pipeline
+    var pipeline_info = std.mem.zeroes(c.VkGraphicsPipelineCreateInfo);
+    pipeline_info.sType = c.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_info.stageCount = 2;
+    pipeline_info.pStages = &shader_stages;
+    pipeline_info.pVertexInputState = &vertex_input;
+    pipeline_info.pInputAssemblyState = &input_assembly;
+    pipeline_info.pViewportState = &viewport_state;
+    pipeline_info.pRasterizationState = &rasterizer;
+    pipeline_info.pMultisampleState = &multisampling;
+    pipeline_info.pColorBlendState = &color_blending;
+    pipeline_info.pDynamicState = &dynamic_state;
+    pipeline_info.layout = vk.pipeline_layout;
+    pipeline_info.renderPass = vk.render_pass;
+    pipeline_info.subpass = 0;
+
+    if (c.vkCreateGraphicsPipelines(vk.device, null, 1, &pipeline_info, null, &vk.graphics_pipeline) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create graphics pipeline\n", .{});
+        return false;
+    }
+
+    std.debug.print("Graphics pipeline created\n", .{});
+    return true;
+}
+
+// Find memory type for buffer allocation
+fn findMemoryType(vk: *VulkanState, type_filter: u32, properties: c.VkMemoryPropertyFlags) ?u32 {
+    var mem_properties: c.VkPhysicalDeviceMemoryProperties = undefined;
+    c.vkGetPhysicalDeviceMemoryProperties(vk.physical_device, &mem_properties);
+
+    for (0..mem_properties.memoryTypeCount) |i| {
+        const idx: u5 = @intCast(i);
+        if ((type_filter & (@as(u32, 1) << idx)) != 0 and
+            (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return @intCast(i);
+        }
+    }
+    return null;
+}
+
+// Create vertex buffer
+fn createVertexBuffer(vk: *VulkanState) bool {
+    const buffer_size: c.VkDeviceSize = @sizeOf(@TypeOf(vertices));
+
+    // Create buffer
+    var buffer_info = std.mem.zeroes(c.VkBufferCreateInfo);
+    buffer_info.sType = c.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = buffer_size;
+    buffer_info.usage = c.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buffer_info.sharingMode = c.VK_SHARING_MODE_EXCLUSIVE;
+
+    if (c.vkCreateBuffer(vk.device, &buffer_info, null, &vk.vertex_buffer) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create vertex buffer\n", .{});
+        return false;
+    }
+
+    // Get memory requirements
+    var mem_requirements: c.VkMemoryRequirements = undefined;
+    c.vkGetBufferMemoryRequirements(vk.device, vk.vertex_buffer, &mem_requirements);
+
+    // Allocate memory
+    var alloc_info = std.mem.zeroes(c.VkMemoryAllocateInfo);
+    alloc_info.sType = c.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize = mem_requirements.size;
+    alloc_info.memoryTypeIndex = findMemoryType(
+        vk,
+        mem_requirements.memoryTypeBits,
+        c.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | c.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    ) orelse {
+        std.debug.print("Failed to find suitable memory type\n", .{});
+        return false;
+    };
+
+    if (c.vkAllocateMemory(vk.device, &alloc_info, null, &vk.vertex_buffer_memory) != c.VK_SUCCESS) {
+        std.debug.print("Failed to allocate vertex buffer memory\n", .{});
+        return false;
+    }
+
+    // Bind buffer to memory
+    _ = c.vkBindBufferMemory(vk.device, vk.vertex_buffer, vk.vertex_buffer_memory, 0);
+
+    // Copy vertex data to buffer
+    var data: ?*anyopaque = null;
+    _ = c.vkMapMemory(vk.device, vk.vertex_buffer_memory, 0, buffer_size, 0, &data);
+    @memcpy(@as([*]u8, @ptrCast(data))[0..@sizeOf(@TypeOf(vertices))], std.mem.asBytes(&vertices));
+    c.vkUnmapMemory(vk.device, vk.vertex_buffer_memory);
+
+    std.debug.print("Vertex buffer created\n", .{});
+    return true;
+}
+
 // Create command pool
 fn createCommandPool(vk: *VulkanState) bool {
     var pool_info = std.mem.zeroes(c.VkCommandPoolCreateInfo);
@@ -509,7 +759,36 @@ fn recordCommandBuffer(vk: *VulkanState, command_buffer: c.VkCommandBuffer, imag
     render_pass_info.pClearValues = &clear_color;
 
     c.vkCmdBeginRenderPass(command_buffer, &render_pass_info, c.VK_SUBPASS_CONTENTS_INLINE);
-    // No draw commands - just clearing
+
+    // Bind the graphics pipeline
+    c.vkCmdBindPipeline(command_buffer, c.VK_PIPELINE_BIND_POINT_GRAPHICS, vk.graphics_pipeline);
+
+    // Set viewport
+    var viewport = c.VkViewport{
+        .x = 0.0,
+        .y = 0.0,
+        .width = @floatFromInt(vk.swapchain_extent.width),
+        .height = @floatFromInt(vk.swapchain_extent.height),
+        .minDepth = 0.0,
+        .maxDepth = 1.0,
+    };
+    c.vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    // Set scissor
+    var scissor = c.VkRect2D{
+        .offset = .{ .x = 0, .y = 0 },
+        .extent = vk.swapchain_extent,
+    };
+    c.vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+    // Bind vertex buffer
+    const vertex_buffers = [_]c.VkBuffer{vk.vertex_buffer};
+    const offsets = [_]c.VkDeviceSize{0};
+    c.vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffers, &offsets);
+
+    // Draw the triangle!
+    c.vkCmdDraw(command_buffer, 3, 1, 0, 0);
+
     c.vkCmdEndRenderPass(command_buffer);
     _ = c.vkEndCommandBuffer(command_buffer);
 }
@@ -667,6 +946,22 @@ fn cleanupVulkan(vk: *VulkanState) void {
         allocator.free(bufs[0..max_frames_in_flight]);
     }
 
+    // Vertex buffer
+    if (vk.vertex_buffer != null) {
+        c.vkDestroyBuffer(vk.device, vk.vertex_buffer, null);
+    }
+    if (vk.vertex_buffer_memory != null) {
+        c.vkFreeMemory(vk.device, vk.vertex_buffer_memory, null);
+    }
+
+    // Graphics pipeline
+    if (vk.graphics_pipeline != null) {
+        c.vkDestroyPipeline(vk.device, vk.graphics_pipeline, null);
+    }
+    if (vk.pipeline_layout != null) {
+        c.vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, null);
+    }
+
     if (vk.framebuffers) |fbs| {
         for (0..vk.swapchain_image_count) |i| {
             c.vkDestroyFramebuffer(vk.device, fbs[i], null);
@@ -767,6 +1062,16 @@ pub fn main() !void {
     // Create framebuffers
     if (!createFramebuffers(&vk)) {
         return error.FramebuffersFailed;
+    }
+
+    // Create graphics pipeline
+    if (!createGraphicsPipeline(&vk)) {
+        return error.GraphicsPipelineFailed;
+    }
+
+    // Create vertex buffer
+    if (!createVertexBuffer(&vk)) {
+        return error.VertexBufferFailed;
     }
 
     // Create command pool
