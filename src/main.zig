@@ -17,6 +17,112 @@ const window_title = "Bidama Hajiki";
 const enable_validation = true;
 const max_frames_in_flight: u32 = 2;
 
+// --- Math Utilities ---
+const Vec3 = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+
+    fn sub(a: Vec3, b: Vec3) Vec3 {
+        return .{ .x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z };
+    }
+
+    fn cross(a: Vec3, b: Vec3) Vec3 {
+        return .{
+            .x = a.y * b.z - a.z * b.y,
+            .y = a.z * b.x - a.x * b.z,
+            .z = a.x * b.y - a.y * b.x,
+        };
+    }
+
+    fn dot(a: Vec3, b: Vec3) f32 {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    fn normalize(v: Vec3) Vec3 {
+        const len = @sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        if (len == 0) return v;
+        return .{ .x = v.x / len, .y = v.y / len, .z = v.z / len };
+    }
+};
+
+const Mat4 = struct {
+    data: [16]f32 = [_]f32{0} ** 16,
+
+    fn identity() Mat4 {
+        var m = Mat4{};
+        m.data[0] = 1;
+        m.data[5] = 1;
+        m.data[10] = 1;
+        m.data[15] = 1;
+        return m;
+    }
+
+    fn multiply(a: Mat4, b: Mat4) Mat4 {
+        var result = Mat4{};
+        for (0..4) |row| {
+            for (0..4) |col| {
+                var sum: f32 = 0;
+                for (0..4) |k| {
+                    sum += a.data[row * 4 + k] * b.data[k * 4 + col];
+                }
+                result.data[row * 4 + col] = sum;
+            }
+        }
+        return result;
+    }
+
+    fn perspective(fov_radians: f32, aspect: f32, near: f32, far: f32) Mat4 {
+        var m = Mat4{};
+        const tan_half_fov = @tan(fov_radians / 2.0);
+        m.data[0] = 1.0 / (aspect * tan_half_fov);
+        m.data[5] = 1.0 / tan_half_fov;
+        m.data[10] = -(far + near) / (far - near);
+        m.data[11] = -1.0;
+        m.data[14] = -(2.0 * far * near) / (far - near);
+        return m;
+    }
+
+    fn lookAt(eye: Vec3, center: Vec3, up: Vec3) Mat4 {
+        const f = Vec3.normalize(Vec3.sub(center, eye));
+        const s = Vec3.normalize(Vec3.cross(f, up));
+        const u = Vec3.cross(s, f);
+
+        var m = Mat4.identity();
+        m.data[0] = s.x;
+        m.data[4] = s.y;
+        m.data[8] = s.z;
+        m.data[1] = u.x;
+        m.data[5] = u.y;
+        m.data[9] = u.z;
+        m.data[2] = -f.x;
+        m.data[6] = -f.y;
+        m.data[10] = -f.z;
+        m.data[12] = -Vec3.dot(s, eye);
+        m.data[13] = -Vec3.dot(u, eye);
+        m.data[14] = Vec3.dot(f, eye);
+        return m;
+    }
+
+    fn rotateZ(angle: f32) Mat4 {
+        var m = Mat4.identity();
+        const cos_a = @cos(angle);
+        const sin_a = @sin(angle);
+        m.data[0] = cos_a;
+        m.data[1] = sin_a;
+        m.data[4] = -sin_a;
+        m.data[5] = cos_a;
+        return m;
+    }
+};
+
+// Uniform buffer object - sent to shaders
+const UniformBufferObject = struct {
+    model: Mat4 = Mat4.identity(),
+    view: Mat4 = Mat4.identity(),
+    proj: Mat4 = Mat4.identity(),
+};
+
 // --- Queue Family Indices ---
 const QueueFamilyIndices = struct {
     graphics_family: u32 = 0,
@@ -59,6 +165,14 @@ const VulkanState = struct {
     // Vertex buffer
     vertex_buffer: c.VkBuffer = null,
     vertex_buffer_memory: c.VkDeviceMemory = null,
+    // Uniform buffers (one per frame in flight)
+    uniform_buffers: ?[*]c.VkBuffer = null,
+    uniform_buffers_memory: ?[*]c.VkDeviceMemory = null,
+    uniform_buffers_mapped: ?[*]?*anyopaque = null,
+    // Descriptors
+    descriptor_set_layout: c.VkDescriptorSetLayout = null,
+    descriptor_pool: c.VkDescriptorPool = null,
+    descriptor_sets: ?[*]c.VkDescriptorSet = null,
 };
 
 // --- Helper Functions ---
@@ -572,9 +686,11 @@ fn createGraphicsPipeline(vk: *VulkanState) bool {
     color_blending.attachmentCount = 1;
     color_blending.pAttachments = &color_blend_attachment;
 
-    // Pipeline layout (empty for now)
+    // Pipeline layout - include descriptor set layout for uniform buffer
     var pipeline_layout_info = std.mem.zeroes(c.VkPipelineLayoutCreateInfo);
     pipeline_layout_info.sType = c.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &vk.descriptor_set_layout;
 
     if (c.vkCreatePipelineLayout(vk.device, &pipeline_layout_info, null, &vk.pipeline_layout) != c.VK_SUCCESS) {
         std.debug.print("Failed to create pipeline layout\n", .{});
@@ -673,6 +789,170 @@ fn createVertexBuffer(vk: *VulkanState) bool {
     return true;
 }
 
+// Create descriptor set layout - describes the uniform buffer binding
+fn createDescriptorSetLayout(vk: *VulkanState) bool {
+    var ubo_layout_binding = std.mem.zeroes(c.VkDescriptorSetLayoutBinding);
+    ubo_layout_binding.binding = 0;
+    ubo_layout_binding.descriptorType = c.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ubo_layout_binding.descriptorCount = 1;
+    ubo_layout_binding.stageFlags = c.VK_SHADER_STAGE_VERTEX_BIT;
+
+    var layout_info = std.mem.zeroes(c.VkDescriptorSetLayoutCreateInfo);
+    layout_info.sType = c.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 1;
+    layout_info.pBindings = &ubo_layout_binding;
+
+    if (c.vkCreateDescriptorSetLayout(vk.device, &layout_info, null, &vk.descriptor_set_layout) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create descriptor set layout\n", .{});
+        return false;
+    }
+
+    std.debug.print("Descriptor set layout created\n", .{});
+    return true;
+}
+
+// Create uniform buffers - one per frame in flight
+fn createUniformBuffers(vk: *VulkanState) bool {
+    const allocator = std.heap.c_allocator;
+    const buffer_size: c.VkDeviceSize = @sizeOf(UniformBufferObject);
+
+    vk.uniform_buffers = (allocator.alloc(c.VkBuffer, max_frames_in_flight) catch return false).ptr;
+    vk.uniform_buffers_memory = (allocator.alloc(c.VkDeviceMemory, max_frames_in_flight) catch return false).ptr;
+    vk.uniform_buffers_mapped = (allocator.alloc(?*anyopaque, max_frames_in_flight) catch return false).ptr;
+
+    for (0..max_frames_in_flight) |i| {
+        var buffer_info = std.mem.zeroes(c.VkBufferCreateInfo);
+        buffer_info.sType = c.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size = buffer_size;
+        buffer_info.usage = c.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_info.sharingMode = c.VK_SHARING_MODE_EXCLUSIVE;
+
+        if (c.vkCreateBuffer(vk.device, &buffer_info, null, &vk.uniform_buffers.?[i]) != c.VK_SUCCESS) {
+            std.debug.print("Failed to create uniform buffer\n", .{});
+            return false;
+        }
+
+        var mem_requirements: c.VkMemoryRequirements = undefined;
+        c.vkGetBufferMemoryRequirements(vk.device, vk.uniform_buffers.?[i], &mem_requirements);
+
+        var alloc_info = std.mem.zeroes(c.VkMemoryAllocateInfo);
+        alloc_info.sType = c.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize = mem_requirements.size;
+        alloc_info.memoryTypeIndex = findMemoryType(
+            vk,
+            mem_requirements.memoryTypeBits,
+            c.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | c.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        ) orelse return false;
+
+        if (c.vkAllocateMemory(vk.device, &alloc_info, null, &vk.uniform_buffers_memory.?[i]) != c.VK_SUCCESS) {
+            std.debug.print("Failed to allocate uniform buffer memory\n", .{});
+            return false;
+        }
+
+        _ = c.vkBindBufferMemory(vk.device, vk.uniform_buffers.?[i], vk.uniform_buffers_memory.?[i], 0);
+
+        // Keep mapped for the lifetime of the application
+        _ = c.vkMapMemory(vk.device, vk.uniform_buffers_memory.?[i], 0, buffer_size, 0, &vk.uniform_buffers_mapped.?[i]);
+    }
+
+    std.debug.print("Uniform buffers created\n", .{});
+    return true;
+}
+
+// Create descriptor pool
+fn createDescriptorPool(vk: *VulkanState) bool {
+    var pool_size = std.mem.zeroes(c.VkDescriptorPoolSize);
+    pool_size.type = c.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_size.descriptorCount = max_frames_in_flight;
+
+    var pool_info = std.mem.zeroes(c.VkDescriptorPoolCreateInfo);
+    pool_info.sType = c.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = max_frames_in_flight;
+
+    if (c.vkCreateDescriptorPool(vk.device, &pool_info, null, &vk.descriptor_pool) != c.VK_SUCCESS) {
+        std.debug.print("Failed to create descriptor pool\n", .{});
+        return false;
+    }
+
+    std.debug.print("Descriptor pool created\n", .{});
+    return true;
+}
+
+// Create descriptor sets - one per frame in flight
+fn createDescriptorSets(vk: *VulkanState) bool {
+    const allocator = std.heap.c_allocator;
+
+    // All sets use the same layout
+    var layouts: [max_frames_in_flight]c.VkDescriptorSetLayout = undefined;
+    for (0..max_frames_in_flight) |i| {
+        layouts[i] = vk.descriptor_set_layout;
+    }
+
+    var alloc_info = std.mem.zeroes(c.VkDescriptorSetAllocateInfo);
+    alloc_info.sType = c.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = vk.descriptor_pool;
+    alloc_info.descriptorSetCount = max_frames_in_flight;
+    alloc_info.pSetLayouts = &layouts;
+
+    vk.descriptor_sets = (allocator.alloc(c.VkDescriptorSet, max_frames_in_flight) catch return false).ptr;
+
+    if (c.vkAllocateDescriptorSets(vk.device, &alloc_info, vk.descriptor_sets) != c.VK_SUCCESS) {
+        std.debug.print("Failed to allocate descriptor sets\n", .{});
+        return false;
+    }
+
+    // Update each descriptor set to point to its uniform buffer
+    for (0..max_frames_in_flight) |i| {
+        var buffer_info = std.mem.zeroes(c.VkDescriptorBufferInfo);
+        buffer_info.buffer = vk.uniform_buffers.?[i];
+        buffer_info.offset = 0;
+        buffer_info.range = @sizeOf(UniformBufferObject);
+
+        var descriptor_write = std.mem.zeroes(c.VkWriteDescriptorSet);
+        descriptor_write.sType = c.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = vk.descriptor_sets.?[i];
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 0;
+        descriptor_write.descriptorType = c.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = &buffer_info;
+
+        c.vkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, null);
+    }
+
+    std.debug.print("Descriptor sets created\n", .{});
+    return true;
+}
+
+// Update uniform buffer with current MVP matrices
+fn updateUniformBuffer(vk: *VulkanState, current_frame: u32, time: f32) void {
+    var ubo = UniformBufferObject{};
+
+    // Rotate around Z axis
+    ubo.model = Mat4.rotateZ(time);
+
+    // Camera looking at origin
+    ubo.view = Mat4.lookAt(
+        .{ .x = 2.0, .y = 2.0, .z = 2.0 },
+        .{ .x = 0.0, .y = 0.0, .z = 0.0 },
+        .{ .x = 0.0, .y = 0.0, .z = 1.0 },
+    );
+
+    // Perspective projection
+    const aspect = @as(f32, @floatFromInt(vk.swapchain_extent.width)) /
+        @as(f32, @floatFromInt(vk.swapchain_extent.height));
+    ubo.proj = Mat4.perspective(std.math.pi / 4.0, aspect, 0.1, 10.0);
+
+    // Vulkan clip space has inverted Y
+    ubo.proj.data[5] *= -1;
+
+    // Copy to mapped memory
+    const dst = vk.uniform_buffers_mapped.?[current_frame];
+    @memcpy(@as([*]u8, @ptrCast(dst))[0..@sizeOf(UniformBufferObject)], std.mem.asBytes(&ubo));
+}
+
 // Create command pool
 fn createCommandPool(vk: *VulkanState) bool {
     var pool_info = std.mem.zeroes(c.VkCommandPoolCreateInfo);
@@ -739,7 +1019,7 @@ fn createSyncObjects(vk: *VulkanState) bool {
 }
 
 // Record command buffer for a frame
-fn recordCommandBuffer(vk: *VulkanState, command_buffer: c.VkCommandBuffer, image_index: u32) void {
+fn recordCommandBuffer(vk: *VulkanState, command_buffer: c.VkCommandBuffer, image_index: u32, current_frame: u32) void {
     var begin_info = std.mem.zeroes(c.VkCommandBufferBeginInfo);
     begin_info.sType = c.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     _ = c.vkBeginCommandBuffer(command_buffer, &begin_info);
@@ -762,6 +1042,18 @@ fn recordCommandBuffer(vk: *VulkanState, command_buffer: c.VkCommandBuffer, imag
 
     // Bind the graphics pipeline
     c.vkCmdBindPipeline(command_buffer, c.VK_PIPELINE_BIND_POINT_GRAPHICS, vk.graphics_pipeline);
+
+    // Bind descriptor set for this frame's uniform buffer
+    c.vkCmdBindDescriptorSets(
+        command_buffer,
+        c.VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vk.pipeline_layout,
+        0,
+        1,
+        &vk.descriptor_sets.?[current_frame],
+        0,
+        null,
+    );
 
     // Set viewport
     var viewport = c.VkViewport{
@@ -794,10 +1086,13 @@ fn recordCommandBuffer(vk: *VulkanState, command_buffer: c.VkCommandBuffer, imag
 }
 
 // Draw a frame
-fn drawFrame(vk: *VulkanState, current_frame: *u32) void {
+fn drawFrame(vk: *VulkanState, current_frame: *u32, time: f32) void {
     // Wait for previous frame
     _ = c.vkWaitForFences(vk.device, 1, &vk.in_flight_fences.?[current_frame.*], c.VK_TRUE, std.math.maxInt(u64));
     _ = c.vkResetFences(vk.device, 1, &vk.in_flight_fences.?[current_frame.*]);
+
+    // Update uniform buffer with current MVP matrices
+    updateUniformBuffer(vk, current_frame.*, time);
 
     // Acquire image
     var image_index: u32 = 0;
@@ -805,7 +1100,7 @@ fn drawFrame(vk: *VulkanState, current_frame: *u32) void {
 
     // Reset and record command buffer
     _ = c.vkResetCommandBuffer(vk.command_buffers.?[current_frame.*], 0);
-    recordCommandBuffer(vk, vk.command_buffers.?[current_frame.*], image_index);
+    recordCommandBuffer(vk, vk.command_buffers.?[current_frame.*], image_index, current_frame.*);
 
     // Submit
     var submit_info = std.mem.zeroes(c.VkSubmitInfo);
@@ -954,6 +1249,36 @@ fn cleanupVulkan(vk: *VulkanState) void {
         c.vkFreeMemory(vk.device, vk.vertex_buffer_memory, null);
     }
 
+    // Uniform buffers
+    if (vk.uniform_buffers) |bufs| {
+        for (0..max_frames_in_flight) |i| {
+            c.vkDestroyBuffer(vk.device, bufs[i], null);
+        }
+        allocator.free(bufs[0..max_frames_in_flight]);
+    }
+    if (vk.uniform_buffers_memory) |mems| {
+        for (0..max_frames_in_flight) |i| {
+            c.vkFreeMemory(vk.device, mems[i], null);
+        }
+        allocator.free(mems[0..max_frames_in_flight]);
+    }
+    if (vk.uniform_buffers_mapped) |mapped| {
+        allocator.free(mapped[0..max_frames_in_flight]);
+    }
+
+    // Descriptor pool (frees descriptor sets automatically)
+    if (vk.descriptor_pool != null) {
+        c.vkDestroyDescriptorPool(vk.device, vk.descriptor_pool, null);
+    }
+    if (vk.descriptor_sets) |sets| {
+        allocator.free(sets[0..max_frames_in_flight]);
+    }
+
+    // Descriptor set layout
+    if (vk.descriptor_set_layout != null) {
+        c.vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, null);
+    }
+
     // Graphics pipeline
     if (vk.graphics_pipeline != null) {
         c.vkDestroyPipeline(vk.device, vk.graphics_pipeline, null);
@@ -1064,6 +1389,11 @@ pub fn main() !void {
         return error.FramebuffersFailed;
     }
 
+    // Create descriptor set layout (needed before pipeline)
+    if (!createDescriptorSetLayout(&vk)) {
+        return error.DescriptorSetLayoutFailed;
+    }
+
     // Create graphics pipeline
     if (!createGraphicsPipeline(&vk)) {
         return error.GraphicsPipelineFailed;
@@ -1072,6 +1402,21 @@ pub fn main() !void {
     // Create vertex buffer
     if (!createVertexBuffer(&vk)) {
         return error.VertexBufferFailed;
+    }
+
+    // Create uniform buffers
+    if (!createUniformBuffers(&vk)) {
+        return error.UniformBuffersFailed;
+    }
+
+    // Create descriptor pool
+    if (!createDescriptorPool(&vk)) {
+        return error.DescriptorPoolFailed;
+    }
+
+    // Create descriptor sets
+    if (!createDescriptorSets(&vk)) {
+        return error.DescriptorSetsFailed;
     }
 
     // Create command pool
@@ -1094,9 +1439,12 @@ pub fn main() !void {
 
     // Main render loop
     var current_frame: u32 = 0;
+    const start_time = std.time.milliTimestamp();
     while (c.glfwWindowShouldClose(window) == c.GLFW_FALSE) {
         c.glfwPollEvents();
-        drawFrame(&vk, &current_frame);
+        const elapsed = std.time.milliTimestamp() - start_time;
+        const time: f32 = @as(f32, @floatFromInt(elapsed)) / 1000.0;
+        drawFrame(&vk, &current_frame, time);
     }
 
     // Wait for device to finish before cleanup
