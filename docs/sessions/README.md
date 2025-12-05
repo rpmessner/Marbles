@@ -4,6 +4,23 @@ This folder contains detailed documentation of each development session for Bida
 
 ## Session Index
 
+### [Session 006: Triangle Rendering](./006-triangle-rendering.md)
+**Date:** 2025-12-04 | **Status:** ✅ Complete
+
+Implemented a complete graphics pipeline to render a colored triangle - the classic "Hello World" of graphics programming.
+
+**Key Accomplishments:**
+- ✅ GLSL shaders (vertex + fragment)
+- ✅ SPIR-V compilation with embedded loading
+- ✅ Full graphics pipeline configuration
+- ✅ Vertex buffer with triangle data
+- ✅ Draw call in render loop
+- ✅ Colored triangle on dark blue background
+
+**Next Up:** Phase 4 - Transformations / Game Content
+
+---
+
 ### [Session 005: Core Rendering](./005-core-rendering.md)
 **Date:** 2025-12-04 | **Status:** ✅ Complete
 
@@ -130,8 +147,8 @@ Links, documentation, resources used
 
 ## Statistics
 
-- **Total Sessions:** 5
+- **Total Sessions:** 6
 - **Project Age:** 13 days
-- **Language:** Zig 0.15.2 (updated from 0.13.0 in Session 005)
-- **Lines of Code:** ~800 (rendering pipeline complete)
-- **Lines of Documentation:** ~2000+ (comprehensive guides)
+- **Language:** Zig 0.15.2
+- **Lines of Code:** ~1100 (triangle rendering complete)
+- **Lines of Documentation:** ~2500+ (comprehensive guides)
