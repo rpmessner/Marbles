@@ -23,11 +23,28 @@ We switched from C++ to Zig because:
 
 ## Build Requirements
 
-### Quick Start
+### Quick Start (with Nix)
+
+The easiest way to get all dependencies:
 
 ```bash
-# Install Zig (0.13.0+)
-# See https://ziglang.org/download/
+# Install Nix (one-time)
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+
+# Enter dev environment (first run downloads deps)
+nix develop
+
+# Build and run
+zig build run
+```
+
+Nix provides: Zig, Vulkan, GLFW, glslc, and all X11/Wayland libs.
+
+### Quick Start (Manual)
+
+```bash
+# Install Zig (0.15.2+)
+# See https://ziglang.org/download/ or use asdf
 
 # Build
 zig build
@@ -36,16 +53,16 @@ zig build
 zig build run
 ```
 
-### Dependencies
+### Manual Dependencies
 
 **Linux:**
 ```bash
-sudo apt-get install libglfw3-dev libvulkan-dev vulkan-tools vulkan-validationlayers-dev
+sudo apt-get install libglfw3-dev libvulkan-dev vulkan-tools vulkan-validationlayers-dev shaderc
 ```
 
 **macOS:**
 ```bash
-brew install glfw vulkan-headers vulkan-loader
+brew install glfw vulkan-headers vulkan-loader shaderc
 # Also install Vulkan SDK from https://vulkan.lunarg.com/
 ```
 
