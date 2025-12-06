@@ -4,6 +4,22 @@ This folder contains detailed documentation of each development session for Bida
 
 ## Session Index
 
+### [Session 008: Architecture Refactor](./008-architecture-refactor.md)
+**Date:** 2025-12-05 | **Status:** ✅ Complete
+
+Split monolithic main.zig (1450 lines) into logical modules for easier mental parsing.
+
+**Key Accomplishments:**
+- ✅ Created math.zig (102 lines) - Vec3, Mat4
+- ✅ Created types.zig (104 lines) - config, VulkanState
+- ✅ Created vulkan_init.zig (537 lines) - initialization
+- ✅ Created vulkan_render.zig (596 lines) - rendering
+- ✅ Slimmed main.zig to 161 lines (entry point only)
+
+**Next Up:** Phase 5 - More Geometry / Game Content
+
+---
+
 ### [Session 007: Transformations](./007-transformations.md)
 **Date:** 2025-12-05 | **Status:** ✅ Complete
 
@@ -163,8 +179,8 @@ Links, documentation, resources used
 
 ## Statistics
 
-- **Total Sessions:** 7
+- **Total Sessions:** 8
 - **Project Age:** 14 days
 - **Language:** Zig 0.15.2
-- **Lines of Code:** ~1450 (transformations complete)
+- **Lines of Code:** ~1500 (across 5 modules)
 - **Lines of Documentation:** ~3000+ (comprehensive guides)
